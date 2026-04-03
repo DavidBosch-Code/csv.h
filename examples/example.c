@@ -32,8 +32,8 @@ static void validate_file(const char *path, char delim, const char *label) {
     CHECK(c != NULL, "open succeeded");
     if (!c) return;
 
-    csv_csvype types[] = { csv_csvYPE_STRING, csv_csvYPE_INT,
-                           csv_csvYPE_FLOAT,  csv_csvYPE_BOOL };
+    csv_type types[] = { CSV_TYPE_STRING, CSV_TYPE_INT,
+                           CSV_TYPE_FLOAT,  CSV_TYPE_BOOL };
     csv_set_schema(c, types, 4);
 
     /* --- column names ------------------------------------------------- */
@@ -59,7 +59,7 @@ static void validate_file(const char *path, char delim, const char *label) {
     CHECK(r->fields[1].i   == 35,                  "first row age   == 35");
     CHECK(r->fields[2].f   == 72500.50,            "first row salary == 72500.50");
     CHECK(r->fields[3].b   == 1,                   "first row active == true");
-    CHECK(r->fields[3].type == csv_csvYPE_BOOL,      "active field type == BOOL");
+    CHECK(r->fields[3].type == CSV_TYPE_BOOL,      "active field type == BOOL");
     csv_row_iter_free(&rit2);
 
     /* --- column iterator ---------------------------------------------- */
@@ -130,14 +130,14 @@ static void test_infer_types(void) {
     CHECK(c != NULL, "infer test file opened");
     if (!c) return;
 
-    csv_csvype expected[] = {
-        csv_csvYPE_INT,    /* "1"     */
-        csv_csvYPE_INT,    /* "0"     */
-        csv_csvYPE_BOOL,   /* "true"  */
-        csv_csvYPE_BOOL,   /* "false" */
-        csv_csvYPE_FLOAT,  /* "3.14"  */
-        csv_csvYPE_INT,    /* "42"    */
-        csv_csvYPE_STRING, /* "hello" */
+    csv_type expected[] = {
+        CSV_TYPE_INT,    /* "1"     */
+        CSV_TYPE_INT,    /* "0"     */
+        CSV_TYPE_BOOL,   /* "true"  */
+        CSV_TYPE_BOOL,   /* "false" */
+        CSV_TYPE_FLOAT,  /* "3.14"  */
+        CSV_TYPE_INT,    /* "42"    */
+        CSV_TYPE_STRING, /* "hello" */
     };
     int idx = 0;
     csv_col_iter cit = csv_column_by_name(c, "val");

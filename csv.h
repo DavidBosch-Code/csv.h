@@ -46,12 +46,12 @@ typedef uint32_t b32;
 /* ---------- types ------------------------------------------------------- */
 
 typedef enum {
-    csv_csvYPE_STRING = 0,
-    csv_csvYPE_INT,
-    csv_csvYPE_FLOAT,
-    csv_csvYPE_BOOL,
-    csv_csvYPE_NULL,
-} csv_csvype;
+    CSV_TYPE_STRING = 0,
+    CSV_TYPE_INT,
+    CSV_TYPE_FLOAT,
+    CSV_TYPE_BOOL,
+    CSV_TYPE_NULL,
+} csv_type;
 
 /* How the file data buffer is owned. Named constants are clearer than the
    magic integers (0/1/-1) that were used before. */
@@ -74,7 +74,7 @@ typedef enum {
 /* A single parsed field. `str` is always populated (malloc'd).
    Numeric/bool fields also fill the corresponding union member. */
 typedef struct {
-    csv_csvype  type;
+    csv_type  type;
     b32         is_null;
     char       *str;
     union {
@@ -92,7 +92,7 @@ typedef struct {
 
 typedef struct {
     char        **names;   /* column names from header row, or NULL */
-    csv_csvype   *types;   /* per-column type hints, or NULL (auto-infer) */
+    csv_type   *types;   /* per-column type hints, or NULL (auto-infer) */
     size_t        count;   /* size_t: column count cannot be negative */
 } csv_schema;
 
@@ -127,7 +127,7 @@ csv_csv *csv_open_mem(const char *buf, size_t len, char delimiter, b32 has_heade
 
 /* Override column types after open. count must match the actual number of
    columns in the file. */
-void   csv_set_schema(csv_csv *csv, const csv_csvype *types, size_t count);
+void   csv_set_schema(csv_csv *csv, const csv_type *types, size_t count);
 
 /* Release all resources. For csv_open_mem, the caller's buffer is not freed.
    Safe to call with NULL. */
@@ -291,21 +291,21 @@ static char *csv__parse_field(const char **p, const char *end, char delim, b32 *
 
 /* ---- internal: type inference & field construction -------------------- */
 
-static csv_csvype csv__infer(const char *s) {
-    if (!s || !*s) return csv_csvYPE_NULL;
+static csv_type csv__infer(const char *s) {
+    if (!s || !*s) return CSV_TYPE_NULL;
     /* "1" and "0" are treated as integers, not bools. Accepting bare digits
        as booleans conflates two distinct types and makes INT inference
        unreliable for any single-digit column. Only explicit true/false strings
        are recognised as boolean. */
     if (!strcmp(s,"true") || !strcmp(s,"false") ||
         !strcmp(s,"TRUE") || !strcmp(s,"FALSE"))
-        return csv_csvYPE_BOOL;
+        return CSV_TYPE_BOOL;
     char *e;
     strtoll(s, &e, 10);
-    if (*e == '\0') return csv_csvYPE_INT;
+    if (*e == '\0') return CSV_TYPE_INT;
     strtod(s, &e);
-    if (*e == '\0') return csv_csvYPE_FLOAT;
-    return csv_csvYPE_STRING;
+    if (*e == '\0') return CSV_TYPE_FLOAT;
+    return CSV_TYPE_STRING;
 }
 
 /* Takes ownership of raw (must be a malloc'd buffer from csv__parse_field).
@@ -315,20 +315,20 @@ static csv_csvype csv__infer(const char *s) {
    that discards the parsed value; merging the two steps would require
    threading parsed values through the type system for a gain that is
    negligible compared to I/O. */
-static csv_field csv__make_field(char *raw, csv_csvype hint) {
+static csv_field csv__make_field(char *raw, csv_type hint) {
     csv_field f = {0};
     f.str = raw;  /* always takes ownership */
     if (!raw || !*raw) {
-        f.type    = csv_csvYPE_NULL;
+        f.type    = CSV_TYPE_NULL;
         f.is_null = 1;
         return f;
     }
-    csv_csvype t = (hint == csv_csvYPE_NULL) ? csv__infer(raw) : hint;
+    csv_type t = (hint == CSV_TYPE_NULL) ? csv__infer(raw) : hint;
     f.type = t;
     switch (t) {
-        case csv_csvYPE_INT:   f.i = strtoll(raw, NULL, 10); break;
-        case csv_csvYPE_FLOAT: f.f = strtod(raw, NULL);      break;
-        case csv_csvYPE_BOOL:  f.b = (raw[0]=='t' || raw[0]=='T'); break;
+        case CSV_TYPE_INT:   f.i = strtoll(raw, NULL, 10); break;
+        case CSV_TYPE_FLOAT: f.f = strtod(raw, NULL);      break;
+        case CSV_TYPE_BOOL:  f.b = (raw[0]=='t' || raw[0]=='T'); break;
         default: break;
     }
     return f;
@@ -369,7 +369,7 @@ static int csv__next_row(csv_csv *csv, csv_row *row) {
             fields = tmp;
         }
 
-        csv_csvype hint = csv_csvYPE_NULL;
+        csv_type hint = CSV_TYPE_NULL;
         if (csv->schema.types && count < csv->schema.count)
             hint = csv->schema.types[count];
 
@@ -467,11 +467,11 @@ csv_csv *csv_open_mem(const char *buf, size_t len, char delimiter, b32 has_heade
     return c;
 }
 
-void csv_set_schema(csv_csv *csv, const csv_csvype *types, size_t count) {
+void csv_set_schema(csv_csv *csv, const csv_type *types, size_t count) {
     free(csv->schema.types);
-    csv->schema.types = malloc(count * sizeof(csv_csvype));
+    csv->schema.types = malloc(count * sizeof(csv_type));
     if (!csv->schema.types) abort();
-    memcpy(csv->schema.types, types, count * sizeof(csv_csvype));
+    memcpy(csv->schema.types, types, count * sizeof(csv_type));
     /* Only update count if we don't have names yet, to avoid mismatch. */
     if (!csv->schema.names) csv->schema.count = count;
 }
