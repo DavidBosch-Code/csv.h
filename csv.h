@@ -75,8 +75,8 @@ typedef enum {
    Numeric/bool fields also fill the corresponding union member. */
 typedef struct {
     csv_csvype  type;
-    char       *str;
     b32         is_null;
+    char       *str;
     union {
         int64_t  i;
         double   f;
