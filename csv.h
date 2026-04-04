@@ -17,7 +17,7 @@
  *
  *   csv_csv *c = csv_open("data.csv", 1);   // auto-detect delimiter
  *
- *   csv_row_iter_t it = csv_rows(c);
+ *   csv_row_iter it = csv_rows(c);
  *   while (csv_row_next(&it)) {
  *       csv_row *row = &it.row;
  *       printf("%s\n", csv_field_str(&row->fields[0]));
@@ -32,9 +32,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* b32: a 32-bit boolean. Communicates intent more clearly than a plain int,
-   and gives predictable struct packing without introducing a _Bool/_Stdbool
-   dependency. Use 0/1 or any truthy value when passing to API functions. */
+// A 32 bit boolean value.
 typedef uint32_t b32;
 
 /* ---------- tunables --------------------------------------------------- */
@@ -53,17 +51,13 @@ typedef enum {
     CSV_TYPE_NULL,
 } csv_type;
 
-/* How the file data buffer is owned. Named constants are clearer than the
-   magic integers (0/1/-1) that were used before. */
 typedef enum {
     CSV_STORAGE_HEAP     = 0,  /* read() into a malloc'd buffer        */
     CSV_STORAGE_MMAP     = 1,  /* mmap'd region                        */
     CSV_STORAGE_BORROWED = 2,  /* caller-owned buffer (csv_open_mem)   */
 } csv_storage;
 
-/* Error codes are positive so that CSV_OK == 0 works as a falsy test
-   (`if (csv_error(c)) { ... }`). Negative codes would also work, but
-   positive is simpler when stored in a typed enum field. */
+
 typedef enum {
     CSV_OK        = 0,
     CSV_ERR_IO    = 1,
@@ -86,14 +80,14 @@ typedef struct {
 
 typedef struct {
     csv_field *fields;
-    size_t       count;   /* size_t: field count cannot be negative */
-    size_t       index;   /* 0-based data row number (header not counted) */
+    size_t       count;
+    size_t       index;
 } csv_row;
 
 typedef struct {
     char        **names;   /* column names from header row, or NULL */
     csv_type   *types;   /* per-column type hints, or NULL (auto-infer) */
-    size_t        count;   /* size_t: column count cannot be negative */
+    size_t        count;   
 } csv_schema;
 
 typedef struct {
@@ -309,12 +303,7 @@ static csv_type csv__infer(const char *s) {
 }
 
 /* Takes ownership of raw (must be a malloc'd buffer from csv__parse_field).
-   Assigns it directly to f.str, avoiding a second allocation and copy.
-   strtoll/strtod are called again here even though csv__infer already called
-   them. This duplication is acceptable: inference is a classification scan
-   that discards the parsed value; merging the two steps would require
-   threading parsed values through the type system for a gain that is
-   negligible compared to I/O. */
+   Assigns it directly to f.str, avoiding a second allocation and copy.*/
 static csv_field csv__make_field(char *raw, csv_type hint) {
     csv_field f = {0};
     f.str = raw;  /* always takes ownership */
@@ -408,12 +397,9 @@ static int csv__init(csv_csv *csv) {
 }
 
 static csv_csv *csv__alloc(char delimiter, b32 has_header) {
-    /* calloc(1, n) allocates exactly one element of n bytes, zero-initialised.
-       calloc(0, n) is implementation-defined and must not be used to obtain a
-       valid object. The '1' is an element count, not a byte count. */
     csv_csv *c = calloc(1, sizeof(*c));
     if (!c) abort();
-    c->delimiter  = delimiter;
+    c->delimiter  = delimiter;mm
     c->has_header = has_header;
     c->fd         = -1;
     return c;
