@@ -1,6 +1,6 @@
 # csv.h — single-header CSV parser
 ## USAGE
-  `#define CSV_IMPLEMENTATION` in exactly ONE translation unit before including.
+  `#define CSV_IMPLEMENTATION` in one translation unit before including.
 ## FEATURES
   - Configurable delimiter (or auto-detect from , ; \t |)
   - mmap for files >= `CSV_MMAP_THRESHOLD` (default 1 MB), read() fallback
